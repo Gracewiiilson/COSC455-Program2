@@ -8,42 +8,69 @@
  * If using OCaml instead of F#, check out: https://learnxinyminutes.com/docs/ocaml/
 *)
 
-
-// A sample grammar
-//
-// sentence	: np vp np sentence_tail 
-// sentence_tail	: conj sentence | eos 
-// np       	: art adj_list noun pp  	 
-// adj_list 	: adj adj_tail | ε  
-// adj_tail 	: comma adj_list | ε     // comma as in “,” 
-// pp       	: prep np | ε  
-// vp       	: adv verb | verb 
+// Grammar for Project 2
+// program : stmt_list
+// stmt_list : stmt stmt_list | ε
+// stmt : assignment | read_stmt | write_stmt | for_loop | if_stmt
+// expr : term term_tail
+// term_tail : add_op term term_tail | ε
+// term : factor factor_tail
+// factor_tail : mult_op factor factor_tail | ε
+// factor : ( expr ) | id
+// add_op : - | +
+// mult_op : * | /
+// rel_oper : > | < | ==
+// cond : expr rel_oper expr
+// assignment : if := expr
+// read_stmt : read id
+// write_stmt : write expr
+// if_stmt : if cond then stmt_list else_stmt
+// else_stmt : else stmt_list fi | fi
+// for_loop : for id = id to id step_stmt do stmt_list done
+// step_stmt : step id | ε
 
 // Tokens
 type Token =
-    | Noun of string
-    | Verb of string
-    | Art of string
-    | Adj of string
-    | Adv of string
-    | Prep of string
-    | Comma // a comma is just a comma
-    | Conj  // don't care what the conjunction is
-    | EOS   // the period at the end of the sentance
-    | UNKNOWN of string
+    | Add_op of string
+    | Mult_op of string
+    | Rel_oper of string
+    | Read of string
+    | Write of string
+    | If of string
+    | Then of string
+    | Else of string
+    | Fi of string
+    | For of string
+    | To of string
+    | Do of string
+    | Done of string
+    | Step of string
+    | Lparent of string
+    | Rparent of string
+    | Otherequals of string
+    | EOS   // the period at the end of the sentence
+    | ID of string
 
     with static member tokenFromLexeme str = // Function to get a token from a lexeme (String)
             match str with
-            | "," -> Comma
-            | "dog" | "cat" -> Noun str
-            | "a" | "an" | "the" -> Art str
-            | "verb" | "chases" | "loves" -> Verb str
-            | "adj" | "fast" -> Adj str
-            | "adv" | "quickly" -> Adv str
-            | "prep" -> Prep str
-            | "." -> EOS
-            | "and" -> Conj
-            | x -> UNKNOWN x
+            | "(" -> Lparent str
+            | ")" -> Rparent str
+            | "+" | "-" -> Add_op str
+            | "*" | "/" -> Mult_op str
+            | ">" | "<" | "==" -> Rel_oper str
+            | "read" -> Read str
+            | "write" -> Write str
+            | "if" -> If str
+            | "then" -> Then str
+            | "else" -> Else str
+            | "fi" -> Fi str
+            | "for" -> For str
+            | "to" -> To str
+            | "do" -> Do str
+            | "done" -> Done str
+            | "step" -> Step str
+            | ":=" -> Otherequals str
+            | unknown -> ID str
 
 
 
@@ -69,53 +96,19 @@ type Token =
 // The |> operator sends (pipes) the output of one function directly to the next one in line.
 // "and" just allows multiple, mutually recursive functions to be defined under a single "let"
 
+let rec parse theList = program theList
 
-let rec parse theList = sentence theList
+// program ::= stmt_list
+and program lst = 
+    lst |> stmt_list
 
-// sentence ::= np vp np sentence_tail
-and  sentence lst =
-    lst |> np |> vp |> np |> sentenceTail
-
-and sentenceTail = function
-    | Conj :: xs -> sentence xs
-    | [EOS] -> printfn "Parse Successful"; []
-    | EOS :: xs ->  failwith "End of sentence marker found, but not at end!"
-    | x :: xs -> failwithf $"Expected EOS but found: %A{x}"
-    | [] -> failwith "Unexpected end of input while processing EOS"
-
-
-// np ::= art adjLst noun pp
-and np = function
-    | Art theArticle :: xs -> xs |> adjList |> noun |> pp
-    | x :: xs -> failwithf $"Expected article, but found: %A{x}"
-    | [] -> failwith "article should not be empty"
-
-
-// adjLst ::= adj adj_tail | <empty>
-and adjList = function
-    | Adj x :: xs -> xs |> adjTail
-               // <empty> means the rule is empty (not the list), if there is no adjective, then…
-    | xs -> xs // just resolve to what was passed (instead of failing)
-
-
-// adjTail ::= comma adjLisy | <empty>
-and adjTail = function
-    | Comma :: xs -> xs |> adjList
-    | xs -> xs // just resolve to what was passed (instead of failing)
-
-
-// pp ::= prep np | <empty>
-and pp = function
-    | Prep thePrep :: xs -> xs |> np
+//stmt_list ::= stmt stmt_list | <empty>
+and stmt_list list = 
+    match list with 
+    | x :: _ when
+        (match x with Read | Write | ID | For | If _ -> true | _ -> false) -> list |> stmt |> stmt_list            
     | xs -> xs
 
-
-// vp ::= adv verb | verb
-and vp = function
-    | Verb x :: xs -> xs
-    | Adv x :: Verb y :: xs -> xs
-    | x :: xs -> failwithf $"Expected Verb Phrase, but found: %A{x}"
-    | [] -> failwith "Unexpected end of input while processing Verb Phrase."
 
 
 // Process the noun (which should be at the head of the list once this method is reached.
