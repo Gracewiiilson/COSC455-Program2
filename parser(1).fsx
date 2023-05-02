@@ -109,7 +109,33 @@ and stmt_list list =
         (match x with Read | Write | ID | For | If _ -> true | _ -> false) -> list |> stmt |> stmt_list            
     | xs -> xs
 
+// stmt ::= id := expr | read id | write expr | for_loop | if_stmt
+and stmt = function
+    | ID :: xs -> xs |> Otherequals |> expr
+    | Read :: xs -> xs |> ID
+    | Write :: xs -> xs |> expr
+    | For :: xs -> xs |> for_loop
+    | If :: xs -> xs |> if_stmt
 
+// expr ::= term term_tail
+and expr =
+    lst |> term |> term_tail
+
+// term_tail ::= add_op term term_tail | ε
+and term_tail = function
+    | Add_op :: xs -> xs |> term |> term_tail
+    | xs -> xs
+
+and term = 
+    lst |> factor |> factor_tail
+
+and factor_tail = function
+    | Mult_op :: xs -> xs |> factor |> factor_tail
+    | xs -> xs
+
+and factor = function
+    | Lparent :: xs -> xs |> expr |> Rparent
+    | ID :: xs -> xs
 
 // Process the noun (which should be at the head of the list once this method is reached.
 // Note: This function could be (and probably should be) defined as a “Lambda”, and included
