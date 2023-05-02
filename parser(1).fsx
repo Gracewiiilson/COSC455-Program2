@@ -126,13 +126,16 @@ and term_tail = function
     | Add_op :: xs -> xs |> term |> term_tail
     | xs -> xs
 
+// term : factor factor_tail
 and term = 
     lst |> factor |> factor_tail
 
+// factor_tail : mult_op factor factor_tail | ε
 and factor_tail = function
     | Mult_op :: xs -> xs |> factor |> factor_tail
     | xs -> xs
 
+// factor : ( expr ) | id
 and factor = function
     | Lparent :: xs -> xs |> expr |> Rparent
     | ID :: xs -> xs
