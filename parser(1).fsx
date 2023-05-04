@@ -45,16 +45,15 @@ type Token =
     | Do of string
     | Done of string
     | Step of string
-    | Lparent of string
-    | Rparent of string
+    | Lpar of string
+    | Rpar of string
     | Otherequals of string
-    | EOS   // the period at the end of the sentence
     | ID of string
 
     with static member tokenFromLexeme str = // Function to get a token from a lexeme (String)
             match str with
-            | "(" -> Lparent str
-            | ")" -> Rparent str
+            | "(" -> Lpar str
+            | ")" -> Rpar str
             | "+" | "-" -> Add_op str
             | "*" | "/" -> Mult_op str
             | ">" | "<" | "==" -> Rel_oper str
@@ -103,49 +102,49 @@ and program lst =
     lst |> stmt_list
 
 //stmt_list ::= stmt stmt_list | <empty>
-and stmt_list list = 
-    match list with 
-    | x :: _ when
-        (match x with Read | Write | ID | For | If _ -> true | _ -> false) -> list |> stmt |> stmt_list            
-    | xs -> xs
+and stmt_list lst = 
+    match lst with 
+    | x :: xs when (isFirstStmt x) ->  lst |> stmt |> stmt_list
+    | _ -> lst
+
+and isFirstStmt = function
+    | Read _ | Write _ | ID _ | For _ | If _ -> true
+    | _  -> false            
+
 
 // stmt ::= id := expr | read id | write expr | for_loop | if_stmt
 and stmt = function
-    | ID :: xs -> xs |> Otherequals |> expr
-    | Read :: xs -> xs |> ID
-    | Write :: xs -> xs |> expr
-    | For :: xs -> xs |> for_loop
-    | If :: xs -> xs |> if_stmt
+    | ID theID :: Otherequals _ :: xs -> xs |> expr
+    | Read theRead :: ID _ :: xs -> xs
+    | Write theWrite :: xs -> xs |> expr
+    | For theFor :: xs -> [] //|> for_loop
+    | If theIF :: xs -> [] //|> if_stmt
+    | _ -> failwith ""
 
 // expr ::= term term_tail
-and expr =
+and expr lst =
     lst |> term |> term_tail
 
 // term_tail ::= add_op term term_tail | ε
 and term_tail = function
-    | Add_op :: xs -> xs |> term |> term_tail
+    | Add_op theAddop :: xs -> xs |> term |> term_tail
     | xs -> xs
 
-// term : factor factor_tail
-and term = 
+// term ::= factor factor_tail
+and term lst = 
     lst |> factor |> factor_tail
 
-// factor_tail : mult_op factor factor_tail | ε
+// factor_tail ::= mult_op factor factor_tail | ε
 and factor_tail = function
-    | Mult_op :: xs -> xs |> factor |> factor_tail
+    | Mult_op theMultop :: xs -> xs |> factor |> factor_tail
     | xs -> xs
 
-// factor : ( expr ) | id
+// factor ::= ( expr ) | id
 and factor = function
-    | Lparent :: xs -> xs |> expr |> Rparent
-    | ID :: xs -> xs
-
-// Process the noun (which should be at the head of the list once this method is reached.
-// Note: This function could be (and probably should be) defined as a “Lambda”, and included
-// in-line in the nounPhrase function above, but it’s just separated out here for clarity.
-and noun = function
-    | Noun n :: xs -> xs // It's just a noun
-    | x -> failwithf $"Expected Noun, but found: %A{x}"
+    | Lpar _ :: xs -> xs |> expr |> function Rpar _ :: xs -> xs | _ -> failwith $"Expected right parentheses, but found: %A{xs}"
+    | ID theID :: xs -> xs
+    | x :: xs -> failwithf $"Expected factor, but found: %A{x}"
+    | [] -> failwith "Factor should not be empty"
 
 
 (* Begin Parsing Process *)
@@ -163,7 +162,7 @@ let startParsing (str:string) =
 
     // Work the magic...
     try
-        let parsedList = sentence tokenList
+        let parsedList = program tokenList
         in printfn $"The Final List:\n\t%A{parsedList}"
     with
         Failure msg -> printfn $"Error: %s{msg}";  System.Console.ReadLine () |> ignore
