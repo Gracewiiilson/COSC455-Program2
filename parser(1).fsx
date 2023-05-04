@@ -21,7 +21,7 @@
 // mult_op : * | /
 // rel_oper : > | < | ==
 // cond : expr rel_oper expr
-// assignment : if := expr
+// assignment : id := expr
 // read_stmt : read id
 // write_stmt : write expr
 // if_stmt : if cond then stmt_list else_stmt
@@ -36,7 +36,7 @@ type Token =
     | Rel_oper of string
     | Read of string
     | Write of string
-    | If of string
+    | IF of string
     | Then of string
     | Else of string
     | Fi of string
@@ -47,6 +47,7 @@ type Token =
     | Step of string
     | Lpar of string
     | Rpar of string
+    | Equals of string
     | Otherequals of string
     | ID of string
 
@@ -59,7 +60,7 @@ type Token =
             | ">" | "<" | "==" -> Rel_oper str
             | "read" -> Read str
             | "write" -> Write str
-            | "if" -> If str
+            | "if" -> IF str
             | "then" -> Then str
             | "else" -> Else str
             | "fi" -> Fi str
@@ -68,10 +69,9 @@ type Token =
             | "do" -> Do str
             | "done" -> Done str
             | "step" -> Step str
+            | "=" -> Equals str
             | ":=" -> Otherequals str
             | unknown -> ID str
-
-
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,18 +108,18 @@ and stmt_list lst =
     | _ -> lst
 
 and isFirstStmt = function
-    | Read _ | Write _ | ID _ | For _ | If _ -> true
+    | Read _ | Write _ | ID _ | For _ | IF _ -> true
     | _  -> false            
 
 
 // stmt ::= id := expr | read id | write expr | for_loop | if_stmt
 and stmt = function
-    | ID theID :: Otherequals _ :: xs -> xs |> expr
-    | Read theRead :: ID _ :: xs -> xs
-    | Write theWrite :: xs -> xs |> expr
-    | For theFor :: xs -> [] //|> for_loop
-    | If theIF :: xs -> [] //|> if_stmt
-    | _ -> failwith ""
+    | ID theID :: Otherequals _ :: xs -> xs |> expr //This is assignment
+    | Read theRead :: ID _ :: xs -> xs //This is read_stmt
+    | Write theWrite :: xs -> xs |> expr //This is write_stmt
+    | For theFor :: xs -> xs |> for_loop
+    | IF theIF :: xs -> xs |> if_stmt
+    | _ -> failwith " This is not a statement!"
 
 // expr ::= term term_tail
 and expr lst =
@@ -146,6 +146,49 @@ and factor = function
     | x :: xs -> failwithf $"Expected factor, but found: %A{x}"
     | [] -> failwith "Factor should not be empty"
 
+// cond ::= expr rel_oper expr
+and cond lst =
+    lst |> expr |> isRelOper |> expr
+and isRelOper = function
+    | Rel_oper _ :: xs -> xs
+    | x :: xs -> failwith $"Expected relational operator, but found: %A{x}"
+    | [] -> failwith "Relational operator field should not be empty"
+
+
+// if_stmt ::= if cond then stmt_list else_stmt
+and if_stmt = function 
+    | IF _ :: xs -> xs |> cond |> isThen |> stmt_list |> else_stmt
+    | x :: xs -> failwith $"Expected then, but found %A{x}"
+    | [] -> failwith "You messed up somehow idk"
+and isThen = function
+    | Then _ :: xs -> xs
+    | x :: xs -> failwith $"Expected then, but found %A{x}"
+    | [] -> failwith "Then should be here"
+// else_stmt : else stmt_list fi | fi
+and else_stmt = function
+    | Else _ :: xs -> xs |> stmt_list |> function Fi _ :: xs -> xs | _ -> failwith $"Expected fi, but found: %A{xs}"
+    | Fi _ :: xs -> xs
+    | x :: xs -> failwith $"Expected else or fi, but found: %A{x}"
+    | [] -> failwith "Else should be here"
+
+// for_loop ::= for id = id to id step_stmt do stmt_list done
+and for_loop = function
+    | For _ :: ID _ :: Equals _ :: ID _ :: To _ :: ID _ :: xs -> xs |> step_stmt |> isDo |> stmt_list |> isDone
+    | x :: xs -> failwith $"Expected for, but found: %A{x}"
+    | [] -> failwith $"You did something very wrong with the for loop..."
+and isDo = function
+    | Do _ :: xs -> xs
+    | x :: xs -> failwith $"Expected do, but found: %A{x}"
+    |[] -> failwith $"do should be here..."
+and isDone = function
+    | Done _ :: xs -> xs
+    | x :: xs -> failwith $"Expected done, but found: %A{x}"
+    | [] -> failwith $"done should be here..."
+
+// step_stmt : step id | ε
+and step_stmt = function
+    | Step _ :: ID _ :: xs -> xs
+    | xs -> xs
 
 (* Begin Parsing Process *)
 let startParsing (str:string) =
