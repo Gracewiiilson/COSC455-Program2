@@ -1,5 +1,5 @@
 
-(* Parser Sample *)
+(* Anthony Saporito & Grace Wilson *)
 
 (* NOTE: This example uses generic OCaml compatable syntax where the syntax where possible, which is
  * in most places!  There *are* LIBRARY differences between F# and OCaml that necessitate slighly
@@ -47,7 +47,6 @@ type Token =
     | Step of string
     | Lpar of string
     | Rpar of string
-    | Equals of string
     | Otherequals of string
     | ID of string
 
@@ -69,7 +68,6 @@ type Token =
             | "do" -> Do str
             | "done" -> Done str
             | "step" -> Step str
-            | "=" -> Equals str
             | ":=" -> Otherequals str
             | unknown -> ID str
 
@@ -119,7 +117,8 @@ and stmt = function
     | Write theWrite :: xs -> xs |> expr //This is write_stmt
     | For theFor :: xs -> xs |> for_loop
     | IF theIF :: xs -> xs |> if_stmt
-    | _ -> failwith " This is not a statement!"
+    | x :: xs -> failwithf $"This (%A{xs}) is not a statement!"
+    | [] -> failwith "Stmt should not be empty!"
 
 // expr ::= term term_tail
 and expr lst =
@@ -173,7 +172,7 @@ and else_stmt = function
 
 // for_loop ::= for id = id to id step_stmt do stmt_list done
 and for_loop = function
-    | ID firstID :: Equals theEquals :: ID secondID :: To _ :: ID thirdID :: xs -> xs |> step_stmt |> isDo |> stmt_list |> function Done _ :: xs -> xs | _ -> failwith $"Expected done, but found: %A{xs}"
+    | ID firstID :: ID secondID :: ID thirdID :: To _ :: ID fourthID :: xs -> xs |> step_stmt |> isDo |> stmt_list |> function Done _ :: xs -> xs | _ -> failwith $"Expected done, but found: %A{xs}"
     | x :: xs -> failwith $"Expected ID but found: %A{x}"
     | [] -> failwith $"For is broken"
 and isDo = function
@@ -185,6 +184,7 @@ and isDo = function
 and step_stmt = function
     | Step _ :: ID thisID :: xs -> xs
     | xs -> xs
+
 
 (* Begin Parsing Process *)
 let startParsing (str:string) =
