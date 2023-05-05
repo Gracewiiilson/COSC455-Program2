@@ -156,14 +156,14 @@ and isRelOper = function
 
 
 // if_stmt ::= if cond then stmt_list else_stmt
-and if_stmt = function 
-    | IF _ :: xs -> xs |> cond |> isThen |> stmt_list |> else_stmt
-    | x :: xs -> failwith $"Expected then, but found %A{x}"
-    | [] -> failwith "You messed up somehow idk"
+and if_stmt lst =
+    lst |> cond |> isThen |> stmt_list |> else_stmt
 and isThen = function
     | Then _ :: xs -> xs
     | x :: xs -> failwith $"Expected then, but found %A{x}"
     | [] -> failwith "Then should be here"
+
+
 // else_stmt : else stmt_list fi | fi
 and else_stmt = function
     | Else _ :: xs -> xs |> stmt_list |> function Fi _ :: xs -> xs | _ -> failwith $"Expected fi, but found: %A{xs}"
@@ -173,21 +173,17 @@ and else_stmt = function
 
 // for_loop ::= for id = id to id step_stmt do stmt_list done
 and for_loop = function
-    | For _ :: ID _ :: Equals _ :: ID _ :: To _ :: ID _ :: xs -> xs |> step_stmt |> isDo |> stmt_list |> isDone
-    | x :: xs -> failwith $"Expected for, but found: %A{x}"
-    | [] -> failwith $"You did something very wrong with the for loop..."
+    | ID firstID :: Equals theEquals :: ID secondID :: To _ :: ID thirdID :: xs -> xs |> step_stmt |> isDo |> stmt_list |> function Done _ :: xs -> xs | _ -> failwith $"Expected done, but found: %A{xs}"
+    | x :: xs -> failwith $"Expected ID but found: %A{x}"
+    | [] -> failwith $"For is broken"
 and isDo = function
-    | Do _ :: xs -> xs
+    | Do thisDo :: xs -> xs
     | x :: xs -> failwith $"Expected do, but found: %A{x}"
     |[] -> failwith $"do should be here..."
-and isDone = function
-    | Done _ :: xs -> xs
-    | x :: xs -> failwith $"Expected done, but found: %A{x}"
-    | [] -> failwith $"done should be here..."
 
 // step_stmt : step id | ε
 and step_stmt = function
-    | Step _ :: ID _ :: xs -> xs
+    | Step _ :: ID thisID :: xs -> xs
     | xs -> xs
 
 (* Begin Parsing Process *)
