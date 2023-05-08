@@ -1,13 +1,6 @@
 
 (* Anthony Saporito & Grace Wilson *)
 
-(* NOTE: This example uses generic OCaml compatable syntax where the syntax where possible, which is
- * in most places!  There *are* LIBRARY differences between F# and OCaml that necessitate slighly
- * different functions to be used for input and output.
- *
- * If using OCaml instead of F#, check out: https://learnxinyminutes.com/docs/ocaml/
-*)
-
 // Grammar for Project 2
 // program : stmt_list
 // stmt_list : stmt stmt_list | ε
@@ -72,22 +65,10 @@ type Token =
             | unknown -> ID str
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// The following is but one of many possible structures. In fact F#/Ocaml has many
-// features that make parsing complex grammars pretty easy... but... to understand those requires a
-// much deeper understanding of the language than we have explored.  Unfortunately, the result is
-// that the code will not be nearly as concise or elegant as it could otherwise be. However, if you
-// which to explore the additional features of the language, feel free to explore!!!
-//
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // NOTE: A Better code approach MIGHT BE to use "Active Patterns", but those are a little more
 // difficult to understand, especially while still trying to grasp "static patterns".
 // https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/active-patterns
 // https://fsharpforfunandprofit.com/posts/convenience-active-patterns/
-
-
 
 // NOTES:
 // The |> operator sends (pipes) the output of one function directly to the next one in line.
@@ -97,7 +78,13 @@ let rec parse theList = program theList
 
 // program ::= stmt_list
 and program lst = 
-    lst |> stmt_list
+    match lst with 
+    | x :: xs when (isFirstStmt x) ->  lst |> stmt_list |> result
+    | _ -> failwithf $"This is not the correct program!"
+
+and result = function 
+    | x :: xs -> failwith "Extra Tokens"
+    | [] -> printfn "YES!" ; []
 
 //stmt_list ::= stmt stmt_list | <empty>
 and stmt_list lst = 
@@ -111,7 +98,8 @@ and isFirstStmt = function
 
 
 // stmt ::= id := expr | read id | write expr | for_loop | if_stmt
-and stmt = function
+and stmt x =
+    match x with 
     | ID theID :: Otherequals _ :: xs -> xs |> expr //This is assignment
     | Read theRead :: ID _ :: xs -> xs //This is read_stmt
     | Write theWrite :: xs -> xs |> expr //This is write_stmt
@@ -210,13 +198,11 @@ let startParsing (str:string) =
 
 
 (* Get the user input and start parsing *)
-// NOTE: To make the let assihnment be a function that accepts no parameters,
+// NOTE: To make the let assignment be a function that accepts no parameters,
 // an "empty tuple" must be accepted.
 let promptAndGo () =
-    (* TEST DATA *)
-    // let userInput = "the fast , fast dog chases the fast cat ."
-    // let userInput = "the noun chases the adj cat and the adj , adj , fast dog adv chases the cat prep a adj noun ."
 
+    //Sample: for i = start to end step 2 do write i done
     let userInput =
         printf "Enter String: ";
         // A case where it's easier to use the .NET ReadLine as opposed to the more restrictive OCaml native variant.
@@ -227,6 +213,3 @@ let promptAndGo () =
 
 // RUN INTERACTIVELY AS A SCRIPT
 promptAndGo ()
-
-// Uncomment the following to pause at the end if it's running in a terminal which dissapears upon running.
-// System.Console.ReadKey(true) |> ignore
